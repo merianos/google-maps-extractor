@@ -106,7 +106,12 @@ switch (true) {
             // Returning null if no more records exists to scrap.
             urlEntry = await getRandomEntryThatIsNotScrapped();
 
-            console.log(chalk.yellow(`Next URL: ${chalk.cyan(urlEntry?.url ?? 'N/A')}`));
+            let prettyURL = 'N/A';
+            if ( urlEntry?.url ) {
+                prettyURL = decodeURIComponent(urlEntry.url);
+            }
+
+            console.log(chalk.yellow(`Next URL: ${chalk.cyan(prettyURL)}`));
 
             if (null === urlEntry) {
                 break;
