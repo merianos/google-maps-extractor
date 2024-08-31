@@ -112,4 +112,5 @@ For my example, a reasonable zoom level is a `19.63`.
 
 Now, keeping this zoom level active, I manually scroll from left to right until I cover the whole area of the island and I count the times I scrolled from Left to Right in order to set the number value to the `mapConfig.divideLng`.
 
-<video src='./video/area-division-steps.mp4' width=830></video>
+
+https://github.com/user-attachments/assets/1f8fa742-5d21-47f8-b783-782afbcda646
