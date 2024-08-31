@@ -10,7 +10,8 @@
   },
   "scripts": {
     "switch_nvm": "nvm use 21.6.2",
-    "placesUrls": "export PUPPETEER_EXECUTABLE_PATH='/usr/bin/google-chrome' && bun run index.js --fetch-places-urls"
+    "loadURL": "bun run index.js --load-urls",
+    "placesURLS": "bun run index.js --fetch-places-urls"
   },
   "dependencies": {
     "chalk": "^5.3.0",

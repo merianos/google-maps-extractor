@@ -6,17 +6,16 @@ import { hasOption }    from "./arguments.js";
 const { Sequelize, DataTypes } = require('sequelize');
 
 const sequelize = new Sequelize(
-    'app_db',
-    'root',
-    'root',
+    Bun.env.DB_NAME,
+    Bun.env.DB_USER,
+    Bun.env.DB_PASS,
     {
-        host   : 'localhost',
-        port: '3307',
+        host   : Bun.env.DB_HOST,
+        port   : Bun.env.DB_PORT,
         dialect: 'mysql',
         logging: hasOption('verbose') || hasOption('v') ? console.log : false,
     }
 );
-
 const categoryUrls = CategoryUrls(sequelize, DataTypes);
 const placeUrls = PlaceUrls(sequelize, DataTypes);
 
@@ -180,14 +179,14 @@ export class DbTransaction {
     }
 
     async commitTransaction() {
-        if ( this.transaction ) {
+        if (this.transaction) {
             await this.transaction.commit();
             this.transaction = null;
         }
     }
 
     async rollbackTransaction() {
-        if ( this.transaction ) {
+        if (this.transaction) {
             await this.transaction.rollback();
             this.transaction = null;
         }
