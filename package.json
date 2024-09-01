@@ -11,7 +11,8 @@
   "scripts": {
     "switch_nvm": "nvm use 21.6.2",
     "loadURL": "bun run index.js --load-urls",
-    "placesURLS": "bun run index.js --fetch-places-urls"
+    "placesURLS": "bun run index.js --fetch-places-urls",
+    "placesData": "bun run index.js --fetch-places-data"
   },
   "dependencies": {
     "chalk": "^5.3.0",
