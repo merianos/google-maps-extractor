@@ -1,3 +1,10 @@
+/**
+ * Responsible to test if the current page is a Terms & Conditions page.
+ *
+ * @param page
+ * @param selector
+ * @returns {Promise<boolean>}
+ */
 export async function isTermsPage(page, selector) {
     try {
         return await page.$(selector) !== null;
@@ -7,6 +14,13 @@ export async function isTermsPage(page, selector) {
     }
 }
 
+/**
+ * If the current page is a Terms & Conditions page, then press the decline button.
+ *
+ * @param page
+ * @param selector
+ * @returns {Promise<boolean>}
+ */
 export async function declineTermsAndConditions(page, selector) {
     try {
         // Check if we're on the terms page
@@ -29,6 +43,12 @@ export async function declineTermsAndConditions(page, selector) {
     }
 }
 
+/**
+ * Let the puppeteer sleep for `ms` time.
+ * @param {Number} ms The milliseconds to sleep.
+ *
+ * @returns {Promise<unknown>}
+ */
 export const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /**
@@ -170,15 +190,93 @@ export const scrapSearchResults = async (page, geoFencedAreas) => {
 
                 let foundInGeoFencedAreas = false;
 
-                for(let fencedArea of geoFencedAreas) {
+                for (let fencedArea of geoFencedAreas) {
                     foundInGeoFencedAreas = isPointInPolygon({ lat, lng }, fencedArea);
 
-                    if ( foundInGeoFencedAreas ) {
+                    if (foundInGeoFencedAreas) {
                         break;
                     }
                 }
 
                 return foundInGeoFencedAreas;
+            }
+        );
+
+        return data;
+    }
+
+    return await scroll();
+}
+
+/**
+ * Responsible to auto-scroll to the bottom of the image gallery in the Google Maps Place Images page and
+ * extract the places images URLs.
+ *
+ * @param {CdpPage} page THe browser page.
+ * @returns {Promise<*>}
+ */
+export const scrapPlaceImages = async (page) => {
+    let lastHeight = await page.evaluate(
+        () => {
+            const element = document.querySelector(`#QA0Szd > div > div > div.w6VYqd > div:nth-child(2) > div > div.e07Vkf.kA9KIf > div > div > div.m6QErb.DxyBCb.kA9KIf.dS8AEf.XiKgde`);
+
+            if (!element) {
+                return 0;
+            }
+
+            return element.scrollHeight;
+        }
+    );
+
+    const scroll = async () => {
+        while (true) {
+            await page.evaluate(
+                () => {
+                    const element = document.querySelector(`#QA0Szd > div > div > div.w6VYqd > div:nth-child(2) > div > div.e07Vkf.kA9KIf > div > div > div.m6QErb.DxyBCb.kA9KIf.dS8AEf.XiKgde`);
+                    element.style.scrollBehavior = 'smooth';
+
+                    if (element) {
+                        element.scrollTo(0, element.scrollHeight);
+                    }
+                }
+            );
+            await page.waitForNetworkIdle();
+            await sleep(getRandomNumber(150, 700));
+
+            let newHeight = await page.evaluate(
+                () => {
+                    const element = document.querySelector(`#QA0Szd > div > div > div.w6VYqd > div:nth-child(2) > div > div.e07Vkf.kA9KIf > div > div > div.m6QErb.DxyBCb.kA9KIf.dS8AEf.XiKgde`);
+
+                    if (!element) {
+                        return 0;
+                    }
+
+                    return element.scrollHeight;
+                }
+            );
+
+            if (newHeight === lastHeight) {
+                break;
+            }
+
+            lastHeight = newHeight;
+        }
+
+        // This method is responsible to return all the places Link URLs from the search results feed.
+        let data = await page.evaluate(
+            () => {
+                const imageUrls = Array.from(document.querySelectorAll('a.OKAoZd .U39Pmb[role="img"]'));
+
+                return imageUrls
+                    .map(
+                        image => {
+                            const regex = /url\("([^"]+)"\)/gm;
+                            const subst = `$1`;
+                            const bgImage = image.style.backgroundImage;
+
+                            return bgImage.replace(regex, subst);
+                        }
+                    );
             }
         );
 
