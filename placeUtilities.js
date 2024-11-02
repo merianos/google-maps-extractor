@@ -94,6 +94,29 @@ export const optimizePlaceImageURL = (url, width = 1600, height = 1600) => {
 }
 
 /**
+ * This function is responsible to change the default size of the Google Maps provided place logo.
+ *
+ * The Place logo URL looks like that:
+ *
+ * https://lh4.googleusercontent.com/-oWPlACC9IXw/AAAAAAAAAAI/AAAAAAAAAAA/Q-NzVnv_bvk/s44-p-k-no-ns-nd/photo.jpg
+ *
+ * In the Place image URL the s44 indicates the image size.
+ *
+ * With this function, we can set new width and Height for the given Place image.
+ *
+ * @param {String} url The Logo image URL.
+ * @param {Number} size The new size of the logo.
+ * @returns {null|*} Null if the url is null, otherwise the logo image URL with the new size.
+ */
+export const optimizePlaceLogo = (url, size = 500) => {
+    if (null === url) {
+        return null;
+    }
+
+    return url.replace(/\/s\d+\-p/, `/s${size}-p`);
+}
+
+/**
  * This function is responsible to return a list of the provided delivery services of a place. The result of this
  * function will be an array of objects that contains the delivery service name, the delivery service logo and the
  * URL if the delivery service for the given place.
@@ -277,4 +300,197 @@ export const processFeatures = featuresArray => {
         );
 
     return mergeDuplicateFeatures(features);
+}
+
+/**
+ * This function is responsible to extract the tickets options for a place.
+ *
+ * @param ticketServicesArray The list of tickets array
+ * @returns {{name: string, services: *[]}|*[]}
+ */
+export const processTicketServices = ticketServicesArray => {
+    if (null === ticketServicesArray) {
+        return [];
+    }
+
+    const agentsList = {
+        name    : '',
+        services: []
+    };
+
+    for (let agency of ticketServicesArray) {
+        agentsList.name = agency?.[0]?.[0] ?? null
+
+        const services = agency?.[1] ?? null;
+
+        if (null !== services) {
+            for (let service of services) {
+                const serviceItem = {
+                    serviceName   : '',
+                    serviceWebsite: '',
+                    servicePrice  : ''
+                }
+
+                serviceItem.serviceName = service?.[2] ?? null;
+                serviceItem.serviceWebsite = service?.[3]?.[0] ?? null;
+                serviceItem.servicePrice = service?.[4] ?? null;
+
+                agentsList.services.push(serviceItem);
+            }
+        }
+    }
+
+    return agentsList;
+}
+
+/**
+ * Responsible to extract entrance tickets data.
+ *
+ * @param ticketServicesArray
+ * @returns {{services: *[]}|*[]}
+ */
+export const processEntranceTicketServices = ticketServicesArray => {
+    if (null === ticketServicesArray) {
+        return [];
+    }
+
+    const agentsList = {
+        services: []
+    };
+
+    for (let agency of ticketServicesArray) {
+        const agencyName = agency?.[3]?.[0] ?? null
+
+        const services = agency?.[2] ?? null;
+
+        if (null !== services) {
+            const serviceItem = {
+                serviceName: agencyName,
+                tickets    : []
+            }
+
+            for (let service of services) {
+                const ticketItem = {
+                    ticketName : null,
+                    ticketLink : null,
+                    ticketPrice: null
+                }
+
+                ticketItem.ticketName = service?.[1] ?? null;
+                ticketItem.ticketLink = service?.[2]?.[0] ?? null;
+                ticketItem.ticketPrice = service?.[4] ?? null;
+
+                serviceItem.tickets.push(ticketItem);
+            }
+
+            agentsList.services.push(serviceItem);
+        }
+    }
+
+    return agentsList;
+}
+
+/**
+ * Responsible to extract the bus lanes and routes data.
+ *
+ * @param stopArrayData
+ * @returns {(*&{routes})[]|null}
+ */
+export const extractBusStopData = stopArrayData => {
+    if (null === stopArrayData) {
+        return null;
+    }
+
+    let routeLanes = [];
+    const routes = [];
+
+    stopArrayData?.[16] &&
+    stopArrayData[16]
+        .forEach(
+            transportTypeData => {
+                const laneData = {
+                    laneType: transportTypeData?.[0] ?? null,
+                    lanes   : []
+                }
+
+                transportTypeData?.[2] &&
+                transportTypeData[2]
+                    .forEach(
+                        lane => {
+                            laneData
+                                .lanes
+                                .push(
+                                    {
+                                        name    : lane?.[5]?.[0]?.[1]?.[0],
+                                        bgColor : lane?.[5]?.[0]?.[1]?.[2],
+                                        txtColor: lane?.[5]?.[0]?.[1]?.[3]
+                                    }
+                                );
+                        }
+                    );
+
+                routeLanes.push(laneData);
+            }
+        );
+
+    stopArrayData?.[1] &&
+    stopArrayData[1]
+        .forEach(
+            laneData => {
+                const laneInfo = {
+                    laneType: laneData[1],
+                    routes  : []
+                }
+
+                laneData?.[2] &&
+                laneData[2]
+                    .forEach(
+                        route => {
+                            laneInfo
+                                .routes
+                                .push(
+                                    {
+                                        name    : route?.[1]?.[0]?.[0] ?? null,
+                                        time    : route?.[1]?.[0]?.[3]?.[0]?.[0]?.[0]?.[2] ?? null,
+                                        number  : route?.[5]?.[1]?.[1]?.[0] ?? null,
+                                        bgColor : route?.[5]?.[1]?.[1]?.[2] ?? null,
+                                        txtColor: route?.[5]?.[1]?.[1]?.[3] ?? null,
+                                    }
+                                );
+                        }
+                    );
+
+                routes.push(laneInfo)
+            }
+        );
+
+    const parseTime = time => {
+        const [ timePart, modifier ] = time.split(' ');
+        let [ hours, minutes ] = timePart.split(':');
+        if (modifier === 'μ.μ.') {
+            hours = (parseInt(hours) === 12) ? '12' : (parseInt(hours) + 12).toString(); // Convert PM hours
+        } else if (modifier === 'π.μ.') {
+            hours = (parseInt(hours) === 12) ? '00' : hours; // Convert AM hours (12 becomes 00)
+        }
+
+        return new Date(0, 0, 0, hours, minutes);
+    }
+
+    for (let routeIdx in routes) {
+        routes[routeIdx]
+            .routes
+            .sort((a, b) => parseTime(a.time) - parseTime(b.time));
+    }
+
+    return routeLanes
+        .map(
+            routeLane => {
+                const route = routes.find(routeEntry => routeEntry.laneType === routeLane.laneType);
+
+                return {
+                    ...routeLane,
+                    routes: [ ...route.routes ]
+                }
+            }
+        );
 }
